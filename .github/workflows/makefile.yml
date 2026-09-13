@@ -1,0 +1,81 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build-linux:
+    strategy:
+      matrix:
+        arch:
+          - runner: ubuntu-22.04
+            name: x86_64
+          - runner: ubuntu-22.04-arm
+            name: aarch64
+
+    name: build-linux-${{ matrix.arch.name }}
+    runs-on: ${{ matrix.arch.runner }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential autoconf automake libtool pkg-config
+          sudo apt remove -y libssl-dev
+          aria2c https://www.openssl.org/source/openssl-1.1.1w.tar.gz
+          tar -zxvf openssl-1.1.1w.tar.gz
+          cd openssl-1.1.1w
+          if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) == 64 ]]; then
+            ./Configure no-ssl3-method linux-aarch64 "-Wa,--noexecstack -fPIC"
+          else
+            ./Configure no-ssl3-method enable-ec_nistp_64_gcc_128 linux-x86_64 "-Wa,--noexecstack -fPIC"
+          fi
+          make depend -j4
+          make -j4
+          sudo make install_sw install_ssldirs
+          sudo rm -rf /usr/local/lib/libcrypto.so* /usr/local/lib/libssl.so*
+          cd ..
+
+          git clone --filter=blob:none https://github.com/libimobiledevice/libplist
+          git clone --filter=blob:none https://github.com/tihmstar/libgeneral
+          git clone --filter=blob:none https://github.com/lzfse/lzfse
+
+          cd libplist
+          ./autogen.sh --enable-static --disable-shared
+          make
+          sudo make install
+          cd ..
+
+          cd libgeneral
+          ./autogen.sh --enable-static --disable-shared
+          make
+          sudo make install
+          cd ..
+
+          cd lzfse
+          make
+          sudo make install
+          cd ..
+
+      - name: Run make
+        run: |
+          ./autogen.sh --enable-static --disable-shared
+          make
+
+      - name: Zip img4tool
+        run: zip -r img4tool_linux-${{ matrix.arch.name }}.zip img4tool/img4tool
+
+      - name: Update latest release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload latest \
+            img4tool_linux-${{ matrix.arch.name }}.zip \
+            --clobber -R ${{ github.repository }}
+
+          gh release edit latest \
+            --title "Latest" \
+            --target ${{ github.sha }} -R ${{ github.repository }}
