@@ -20,6 +20,26 @@ AC_SUBST([VERSION_COMMIT_SHA], ["m4_esyscmd([git rev-parse HEAD | tr -d '\n'])"]
 AC_PROG_CXX
 AC_PROG_CC
 
+# Universal macOS build
+AC_ARG_ENABLE([universal],
+    [AS_HELP_STRING([--enable-universal],
+        [build a universal macOS binary (arm64 + x86_64)])],
+    [enable_universal=$enableval],
+    [enable_universal=no])
+
+AS_IF([test "x$enable_universal" = "xyes"], [
+    case $host_os in
+        darwin*)
+            CFLAGS="$CFLAGS -arch arm64 -arch x86_64"
+            CXXFLAGS="$CXXFLAGS -arch arm64 -arch x86_64"
+            LDFLAGS="$LDFLAGS -arch arm64 -arch x86_64"
+            ;;
+        *)
+            AC_MSG_ERROR([--enable-universal is only supported on macOS])
+            ;;
+    esac
+])
+
 # Library versions
 OPENSSL_REQUIRES_STR="openssl >= 0.9.8"
 LIBPLIST_REQUIRES_STR="libplist-2.0 >= 2.2.0"
@@ -39,8 +59,8 @@ case $host_os in
   ;;
 esac
 
-CXXFLAGS+=" -std=c++11"
-CFLAGS+=" -std=c11"
+CXXFLAGS="$CXXFLAGS -std=c++11"
+CFLAGS="$CFLAGS -std=c11"
 # Versioning.
 
 # Checks for libraries.
