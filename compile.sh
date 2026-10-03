@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # This script is for macOS. For Linux, see .github/workflows/makefile.yml
 export MACOSX_DEPLOYMENT_TARGET=10.11
-libplist_ver=2.0.4
+libplist_ver=2.0.12
 
 export libgeneral_CFLAGS="-I/usr/local/include -stdlib=libc++"
 export libgeneral_LIBS="-L/usr/local/lib -lgeneral"
@@ -35,4 +35,5 @@ install_name_tool -id @loader_path/libgeneral.0.dylib output/lib/libgeneral.0.dy
 install_name_tool -id @loader_path/libimg4tool.0.dylib output/lib/libimg4tool.0.dylib
 install_name_tool -id @loader_path/libplist-$libplist_ver.dylib output/lib/libplist-$libplist_ver.dylib
 
-install_name_tool -change /usr/local/lib/libgeneral.0.dylib @executable_path/lib/libgeneral.0.dylib output/lib/libimg4tool.0.dylib
+install_name_tool -change /usr/local/lib/libgeneral.0.dylib @loader_path/libgeneral.0.dylib output/lib/libimg4tool.0.dylib
+install_name_tool -change /usr/local/lib/libplist-$libplist_ver.dylib @loader_path/libplist-$libplist_ver.dylib output/lib/libimg4tool.0.dylib
